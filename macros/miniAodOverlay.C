@@ -13,23 +13,14 @@
 
 using namespace std;
 
+/* Global variables defining input histograms */
 const static string s8TeV_FILE_NAME   = "data/TTbar_8TeV.root"; 
 const static string s13TeV_FILE_NAME  = "data/TTbar_13TeV.root"; 
 
 
-TH1* GetTTbarHist(const string histname, const string filename)
-{
-	TFile* ttbarFile = new TFile(filename.c_str());
-	if (ttbarFile->IsZombie()) { cout << "TTbar file not found!" << endl; assert (false); }
-
-	TH1* ttbarHist = dynamic_cast<TH1*> (ttbarFile->Get(histname.c_str()));
-	if (ttbarHist == NULL) { cout << "TTbar hist " << histname << " not found!" << endl; assert (false); }
-
-	return ttbarHist;
-}
-
-
-
+/**************************************
+ * Can be used look into a histogram
+ *************************************/
 void DumpHist(const TH1* hist)
 {
 	assert (hist != NULL && "DumpHist:: hist passed is null!"); 
@@ -43,13 +34,13 @@ void DumpHist(const TH1* hist)
 			<< hist->GetBinLowEdge(bin) << ", " << hist->GetXaxis()->GetBinUpEdge(bin)<< "]" 
 			<< std::setw(10) << hist->GetBinContent(bin) 
 			<< std::setw(10) << hist->GetBinError(bin) << endl;
-			if (hist->GetBinCenter(bin) > 500) sum += hist->GetBinContent(bin);
 		}
 	}
-
-	cout << "Sum (>500) = " << sum << endl;
 }
 
+/**************************************
+ * Scale and adjust bin sizes of hist
+ *************************************/
 void ScaleHist(TH1* h, const int rebin) {
 	h->Sumw2();
 	h->SetLineWidth(2);
@@ -57,6 +48,11 @@ void ScaleHist(TH1* h, const int rebin) {
 	h->Scale(1.0/h->Integral());
 }
 
+/**************************************
+ * Main body. 
+ * Open files, read histograms, 
+ * set aesthetics, draw, and print
+ *************************************/
 void miniAodOverlay(const string histname, const string title, const int rebin=1, const string epsname="", const bool logScale =1) 
 {
 	TFile* rootFile8TeV = new TFile (s8TeV_FILE_NAME.c_str());
@@ -73,16 +69,16 @@ void miniAodOverlay(const string histname, const string title, const int rebin=1
 		assert (false);
 	}
 
-	// hack to pick up the hist with difference names
+	/* hack to pick up the hist with difference names */
 	stringstream s8TeVHistName, s13TeVHistName, s8TeVHistPath, s13TeVHistPath;
 	if (histname == "Jet1Pt") {
-		s8TeVHistName << "jet1_pt";
+		s8TeVHistName  << "jet1_pt";
 		s13TeVHistName << "nLeadPt";
 	} else if (histname == "Jet2Pt") {
-		s8TeVHistName << "jet2_pt";
+		s8TeVHistName  << "jet2_pt";
 		s13TeVHistName << "nSecondPt";
 	} else if (histname == "Jet3Pt") {
-		s8TeVHistName << "jet3_pt";
+		s8TeVHistName  << "jet3_pt";
 		s13TeVHistName << "nThirdPt";
 	} else  {
 		cout << "ERR: Cannot find matching hist for your request of " << histname << "!"<< endl;
@@ -98,11 +94,11 @@ void miniAodOverlay(const string histname, const string title, const int rebin=1
 	TH1* hist13TeV = dynamic_cast<TH1*> (rootFile13TeV->Get(s13TeVHistPath.str().c_str()));
 	if (hist13TeV == NULL) { cout << "ERR: 13 TeV hist " << s13TeVHistPath.str() << " not found!" << endl; assert (false); }
 
-	//TH1*	hist_ratio = dynamic_cast<TH1*> (hist8TeV->Clone("histratio"));
-
+	/* now normalize hist to 1.0 */
 	ScaleHist(hist8TeV, rebin);
 	ScaleHist(hist13TeV, rebin);
 
+	/* make them pretty */
 	const int i8TeVColor  = 4;
 	const int i13TeVColor = 6;
 
@@ -110,11 +106,12 @@ void miniAodOverlay(const string histname, const string title, const int rebin=1
 	hist13TeV->SetLineColor(i13TeVColor);
 	hist8TeV->SetTitle(title.c_str());
 
-
+	/* add a legend */
 	TLegend *leg1  = new TLegend(0.6,0.75,0.9,0.9);
-	leg1->AddEntry(hist8TeV,"t#bar{t} (8 TeV)");
-	leg1->AddEntry(hist13TeV,"t#bar{t} (13 TeV)");
+	leg1->AddEntry(hist8TeV,  "t#bar{t} (8 TeV)");
+	leg1->AddEntry(hist13TeV, "t#bar{t} (13 TeV)");
 
+	/* create new canvas and draw */
 	new TCanvas();
 	gStyle->SetOptStat(0);
 	gPad->SetLogy();
@@ -127,11 +124,15 @@ void miniAodOverlay(const string histname, const string title, const int rebin=1
 
 }
 
+/**************************************
+ * This is the entry point to the code.
+ * This method is overloaded
+ *************************************/
 void miniAodOverlay()
 {
 	const bool logScale = 0;
 	const int rebin = 4;
-	miniAodOverlay("Jet1Pt", "Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Events;", rebin, "Jet1Pt.eps", logScale);
-	miniAodOverlay("Jet2Pt", "2nd Lead Jet (P_{T}>50 && |#eta | < 2.5));P_{T} [GeV];Events;", rebin, "Jet2Pt.eps", logScale);
-	miniAodOverlay("Jet3Pt", "3rd Lead Jet (P_{T}>50 && |#eta | < 2.5));P_{T} [GeV];Events;", rebin, "Jet3Pt.eps", logScale);
+	miniAodOverlay("Jet1Pt", "Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;", rebin, "Jet1Pt.eps", logScale);
+	miniAodOverlay("Jet2Pt", "2nd Lead Jet (P_{T}>50 && |#eta | < 2.5));P_{T} [GeV];Fraction of Events;", rebin, "Jet2Pt.eps", logScale);
+	miniAodOverlay("Jet3Pt", "3rd Lead Jet (P_{T}>50 && |#eta | < 2.5));P_{T} [GeV];Fraction of Events;", rebin, "Jet3Pt.eps", logScale);
 }
