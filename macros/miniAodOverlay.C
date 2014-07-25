@@ -53,7 +53,10 @@ void ScaleHist(TH1* h, const int rebin) {
  * Open files, read histograms, 
  * set aesthetics, draw, and print
  *************************************/
-void miniAodOverlay(const string histname, const string title, const int rebin=1, const string epsname="", const bool logScale =1) 
+void miniAodOverlay(const string name8TeV, const string name13TeV, 
+						const string title, 
+						const int rebin=1, const string epsname="", 
+						const bool logScale =1) 
 {
 	TFile* rootFile8TeV = new TFile (s8TeV_FILE_NAME.c_str());
 	if (rootFile8TeV->IsZombie())
@@ -69,24 +72,10 @@ void miniAodOverlay(const string histname, const string title, const int rebin=1
 		assert (false);
 	}
 
-	/* hack to pick up the hist with difference names */
-	stringstream s8TeVHistName, s13TeVHistName, s8TeVHistPath, s13TeVHistPath;
-	if (histname == "Jet1Pt") {
-		s8TeVHistName  << "jet1_pt";
-		s13TeVHistName << "nLeadPt";
-	} else if (histname == "Jet2Pt") {
-		s8TeVHistName  << "jet2_pt";
-		s13TeVHistName << "nSecondPt";
-	} else if (histname == "Jet3Pt") {
-		s8TeVHistName  << "jet3_pt";
-		s13TeVHistName << "nThirdPt";
-	} else  {
-		cout << "ERR: Cannot find matching hist for your request of " << histname << "!"<< endl;
-		assert(false);
-	}
-
-	s13TeVHistPath << "/CfiFile/" << s13TeVHistName.str() ;
-	s8TeVHistPath  << "/Factorization/HT0to5000/" << s8TeVHistName.str();
+	/* Generate complete path with hist name */
+	stringstream s8TeVHistPath, s13TeVHistPath;
+	s13TeVHistPath << "/CfiFile/" << name13TeV;
+	s8TeVHistPath  << "/Factorization/HT0to5000/" << name8TeV;
 
 	TH1* hist8TeV = dynamic_cast<TH1*> (rootFile8TeV->Get(s8TeVHistPath.str().c_str()));
 	if (hist8TeV == NULL) { cout << "ERR: 8 TeV hist " << s8TeVHistPath.str() << " not found!" << endl; assert (false); }
@@ -132,7 +121,7 @@ void miniAodOverlay()
 {
 	const bool logScale = 0;
 	const int rebin = 4;
-	miniAodOverlay("Jet1Pt", "Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;", rebin, "Jet1Pt.eps", logScale);
-	miniAodOverlay("Jet2Pt", "2nd Lead Jet (P_{T}>50 && |#eta | < 2.5));P_{T} [GeV];Fraction of Events;", rebin, "Jet2Pt.eps", logScale);
-	miniAodOverlay("Jet3Pt", "3rd Lead Jet (P_{T}>50 && |#eta | < 2.5));P_{T} [GeV];Fraction of Events;", rebin, "Jet3Pt.eps", logScale);
+	miniAodOverlay("jet1_pt", "nLeadPt"  , "Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;"      , rebin, "Jet1Pt.eps", logScale);
+	miniAodOverlay("jet2_pt", "nSecondPt", "2nd Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;", rebin, "Jet2Pt.eps", logScale);
+	miniAodOverlay("jet3_pt", "nThirdPt" , "3rd Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;", rebin, "Jet3Pt.eps", logScale);
 }
