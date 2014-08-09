@@ -1,1 +1,4 @@
 *.root
+mydict.h
+mydict.cxx
+mydict.o
