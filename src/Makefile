@@ -9,7 +9,10 @@ ROOTGLIBS   = $(shell $(ROOTSYS)/bin/root-config --glibs)
 CXX         = g++
 #CXXFLAGS    = -g -fPIC -Wno-deprecated -0 -ansi -D_GNU_SOURCE -g -02
 CXXFLAGS    = -Wno-deprecated
-CXXFLAGS   +="-stdlib=libstdc++"
+#These flags may be deprecated in the new cpp
+# I can use them on Maveric with g++ 4.2.1
+# So I removed them to run at LPC - 8/8/14, Sam
+#CXXFLAGS   +="-stdlib=libstdc++"
 CXXFLAGS   += $(ROOTCFLAGS)
 LIBS        = $(ROOTLIBS)
 
@@ -27,12 +30,12 @@ GLIBS     = $(filter-out -lNew -lz , $(NGLIBS))
 .SUFFIXES: .cc,.cxx,.hh,.h
 #.PREFIXES: ./lib/
 
-all: runsmear
+all: runcsa
 
-runsmear: CSA14.cc \
+runcsa: CSA14.cc \
    mydict.o 
-	$(CXX) $(CXXFLAGS) -o runsmear *.o $(GLIBS) $ $<
-	touch runsmear
+	$(CXX) $(CXXFLAGS) -o runcsa *.o $(GLIBS) $ $<
+	touch runcsa
 
 mydict.cxx: myLinkDef.h
 	@echo "Generating dictionary ..."
@@ -45,3 +48,5 @@ mydict.o: mydict.cxx
 clean: 
 	rm -f *.o 
 	rm -f runcsa
+	rm -f mydict.cxx
+	rm -f mydict.h
