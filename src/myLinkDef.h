@@ -1,7 +1,10 @@
 #include <vector>
 #include <string>
 #ifdef __MAKECINT__
-#pragma link C++ class vector<vector<int> >+;
-#pragma link C++ class vector<vector<double> >+;
-#pragma link C++ class vector<vector<string> >+;
+#include <TLorentzVector.h>
+#pragma link C++ class std::vector<TLorentzVector>+;
+#pragma link C++ class std::vector<int>+;
+#pragma link C++ class std::vector<double>+;
+#pragma link C++ class std::vector<vector<int> >+;
+#pragma link C++ class std::vector<std::vector<std::vector<int> > >;
 #endif
