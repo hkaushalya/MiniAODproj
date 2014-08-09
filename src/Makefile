@@ -1,6 +1,8 @@
+#ROOT libraries: needs root-config
 ROOTCFLAGS  = $(shell $(ROOTSYS)/bin/root-config --cflags)
 ROOTLIBS    = $(shell $(ROOTSYS)/bin/root-config --libs)
 ROOTGLIBS   = $(shell $(ROOTSYS)/bin/root-config --glibs)
+ROOTINCLUDES = $(shell $(ROOTSYS)/bin/root-config --prefix)/include
 
 #http://stackoverflow.com/questions/21676759/after-update-to-mac-os-10-8-undefined-symbols-for-architecture-x86-64-clang
 #-stdlib=libstdc++
@@ -37,9 +39,11 @@ runcsa: CSA14.cc \
 	$(CXX) $(CXXFLAGS) -o runcsa *.o $(GLIBS) $ $<
 	touch runcsa
 
+#this does not make difference. it somehow pickup the ROOINCLUDE path?
+#mydict.cxx: $(ROOTINCLUDES) myLinkDef.h
 mydict.cxx: myLinkDef.h
 	@echo "Generating dictionary ..."
-	@rootcint mydict.cxx -c myLinkDef.h
+	@rootcint mydict.cxx -c TLorentzVector.h myLinkDef.h
 
 mydict.o: mydict.cxx
 	$(CXX) $(CXXFLAGS) -c -o mydict.o $<
