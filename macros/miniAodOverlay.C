@@ -42,7 +42,7 @@ void DumpHist(const TH1* hist)
  * Scale and adjust bin sizes of hist
  *************************************/
 void ScaleHist(TH1* h, const int rebin) {
-	h->Sumw2();
+	//h->Sumw2();
 	h->SetLineWidth(2);
 	h->Rebin(rebin);
 	h->Scale(1.0/h->Integral());
@@ -55,7 +55,7 @@ void ScaleHist(TH1* h, const int rebin) {
  *************************************/
 void miniAodOverlay(const string name8TeV, const string name13TeV, 
 						const string title, 
-						const int rebin=1, const string epsname="", 
+						const int rebin=1, const string epsname="out.eps", 
 						const bool logScale =1) 
 {
 	TFile* rootFile8TeV = new TFile (s8TeV_FILE_NAME.c_str());
@@ -106,7 +106,7 @@ void miniAodOverlay(const string name8TeV, const string name13TeV,
 	gPad->SetLogy();
 	gPad->SetTickx();
 	gPad->SetTicky();
-	hist8TeV->Draw();
+	hist8TeV->Draw("LF2");
 	hist13TeV->Draw("same");
 	leg1->Draw();
 	gPad->Print(epsname.c_str());
@@ -119,9 +119,26 @@ void miniAodOverlay(const string name8TeV, const string name13TeV,
  *************************************/
 void miniAodOverlay()
 {
-	const bool logScale = 0;
-	const int rebin = 4;
-	miniAodOverlay("jet1_pt", "nLeadPt"  , "Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;"      , rebin, "Jet1Pt.eps", logScale);
-	miniAodOverlay("jet2_pt", "nSecondPt", "2nd Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;", rebin, "Jet2Pt.eps", logScale);
-	miniAodOverlay("jet3_pt", "nThirdPt" , "3rd Lead Jet (P_{T}>50 & |#eta | < 2.5);P_{T} [GeV];Fraction of Events;", rebin, "Jet3Pt.eps", logScale);
+	bool logScale = 1; int rebin = 2;
+	miniAodOverlay("jet1_pt", "nLeadPt"  , "P_{T} of Lead Jet^{P_{T}>50 & |#eta | < 2.5};P_{T} [GeV];Fraction of Events;"    , rebin, "Jet1Pt.eps", logScale);
+	miniAodOverlay("jet2_pt", "nSecondPt", "P_{T} of 2nd Lead Jet^{P_{T}>50 & |#eta |<2.5};P_{T} [GeV];Fraction of Events;", rebin, "Jet2Pt.eps", logScale);
+	miniAodOverlay("jet3_pt", "nThirdPt" , "P_{T} of 3rd Lead Jet^{P_{T}>50 & |#eta |<2.5};P_{T} [GeV];Fraction of Events;", rebin, "Jet3Pt.eps", logScale);
+	logScale = 0; rebin = 2;
+	miniAodOverlay("jet1_phi", "nLeadPhi"  , "#Phi of Lead Jet^{P_{T}>50 & |#eta |<2.5};#Phi;Fraction of Events;"    , rebin, "Jet1Phi.eps", logScale);
+	miniAodOverlay("jet2_phi", "nSecondPhi", "#Phi of 2nd Lead Jet^{P_{T}>50 & |#eta |<2.5};#Phi;Fraction of Events;", rebin, "Jet2Phi.eps", logScale);
+	miniAodOverlay("jet3_phi", "nThirdPhi" , "#Phi of 3rd Lead Jet^{P_{T}>50 & |#eta |<2.5};#Phi;Fraction of Events;", rebin, "Jet3Phi.eps", logScale);
+	rebin = 2;
+	miniAodOverlay("jet1_eta", "nLeadEta"  , "#eta of Lead Jet^{P_{T}>50 & |#eta | < 2.5};#eta;Fraction of Events;"    , rebin, "Jet1Eta.eps", logScale);
+	miniAodOverlay("jet2_eta", "nSecondEta", "#eta of 2nd Lead Jet^{P_{T}>50 & |#eta | < 2.5};#eta;Fraction of Events;", rebin, "Jet2Eta.eps", logScale);
+	miniAodOverlay("jet3_eta", "nThirdEta" , "#eta of 3rd Lead Jet^{P_{T}>50 & |#eta | < 2.5};#eta;Fraction of Events;", rebin, "Jet3Eta.eps", logScale);
+	
+	logScale = 1; rebin = 1;
+	miniAodOverlay("pfmet", "MetPt" , "pfMet (8TeV)vs slimmedMETs (13 TeV);MET [GeV];Fraction of Events;", rebin, "met.eps", logScale);
+ 	logScale = 0; rebin = 1;
+//	miniAodOverlay("pfmet", "MetPhi" , "pfMet (8TeV)vs slimmedMETs (13 TeV);MET #Phi [GeV];Fraction of Events;", rebin, "metphi.eps", logScale);
+//	miniAodOverlay("pfht", "ht" , "pfHt (8TeV)vs slimmedHTs (13 TeV);HT [GeV];Fraction of Events;", rebin, "ht.eps", logScale);
+	logScale = 0, rebin = 0;
+//	miniAodOverlay("njet50", "njet50" , ";Jet Multiplicity;# of Jets [P_{T}>50 & |#eta | < 2.5];Fraction of Events;", rebin, "njet50.eps", logScale);
+//	miniAodOverlay("njet30", "njet30" , ";Jet Multiplicity;# of Jets [P_{T}>30 & |#eta | < 5.0];Fraction of Events;", rebin, "njet30.eps", logScale);
+//	miniAodOverlay("pfht", "ht" , ";;Fraction of Events;", rebin, ".eps", logScale);
 }
