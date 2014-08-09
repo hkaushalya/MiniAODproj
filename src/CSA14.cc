@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
 	if (argc <= 3) {
 		cerr <<"Please give 3 arguments " << "runList " << " " << "outputFileName" << " " << "# of evts  nJet50Min  nJet50Max" << endl;
 		cerr <<" Valid configurations are " << std::endl;
-		cerr << " ./runcsa filelist.txt out.root nevts2process[-1 = all] smearingSyst[0=mean, 1-6 systs]" << std::endl;
+		cerr << " ./runcsa filelist.txt out.root nevts2process[-1 == all]" << std::endl;
 		cerr << "Eg:  ./runcsa filelist.txt out.root 100" << std::endl;
 		return -1;
 	}
@@ -145,16 +145,7 @@ int main(int argc, char* argv[])
 		if (num>=1) evts = num;
 		if (verbose) cout << __FUNCTION__ << ": evts = " << evts << endl;
 	} else {
-		cout << "argument 4 is not a number. using default value for evts = " << evts << endl;
-	}
-
-	if (argc>4)
-	{
-		const char *g4 = argv[4];
-		if (isdigit(g4[0])) systematic_var = atoi(g4);
-		else {
-			cout << "argument 4 is not a number. using default value for systematic_var = " << systematic_var << endl;
-		}
+		cout << "argument 3 is not a number. using default value for evts = " << evts << endl;
 	}
 
 
