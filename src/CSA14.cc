@@ -127,8 +127,8 @@ int main(int argc, char* argv[])
 	if (argc <= 3) {
 		cerr <<"Please give 3 arguments " << "runList " << " " << "outputFileName" << " " << "# of evts  nJet50Min  nJet50Max" << endl;
 		cerr <<" Valid configurations are " << std::endl;
-		cerr << " ./optimize filelist.txt out.root nevts2process[-1 = all] smearingSyst[0=mean, 1-6 systs]" << std::endl;
-		cerr << "Eg:  ./optimize filelist.txt out.root 100" << std::endl;
+		cerr << " ./runcsa filelist.txt out.root nevts2process[-1 = all] smearingSyst[0=mean, 1-6 systs]" << std::endl;
+		cerr << "Eg:  ./runcsa filelist.txt out.root 100" << std::endl;
 		return -1;
 	}
 
