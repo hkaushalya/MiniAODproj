@@ -5,8 +5,6 @@
  * (from ifdef to endif)
  * can be safely removed (because this is already in mydict.cxx)
  */
-#include <vector>
-#include "TLorentzVector.h"
 #ifdef __MAKECINT__
 #pragma link C++ class vector<int>;
 #pragma link C++ class vector<vector<int> >;
@@ -18,6 +16,7 @@
 /* all header files goes here */
 
 #include <assert.h>
+#include <vector>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -25,6 +24,7 @@
 #include "TH2D.h"
 #include "TTree.h"
 #include "TChain.h"
+#include "TLorentzVector.h"
 #include "TFile.h"
 
 
@@ -35,14 +35,14 @@
 
 using namespace std;
 
-static const bool bVERBOSE = false;
+static const bool verbose = false;
 static const double      pt30Arr[] = {   -1,        -1,      30,    -1  };
 static const double pt30Eta24Arr[] = {   -1,       2.4,      30,    -1  };
 static const double pt50Eta24Arr[] = {   -1,       2.4,      50,    -1  };
 static const double pt70Eta24Arr[] = {   -1,       2.4,      70,    -1  };
 static const double      dphiArr[] = {   -1,       4.7,      30,    -1  };
 static const double      bTagArr[] = {   -1,       2.4,      30,    -1  };
-static const int nJetsSelPt30Eta24 = 5, nJetsSelPt50Eta24 = 3, nJetsSelPt70Eta24 = 2;
+static const int nJetsSel = 5, nJetsSelPt30Eta24 = 5, nJetsSelPt50Eta24 = 4, nJetsSelPt70Eta24 = 2;
 const double minMETcut = 200, maxMETcut = -1;
 
 
@@ -58,6 +58,16 @@ vector<double> calcDPhi(const vector<TLorentzVector> &inputJets, const double me
 		const double minPt, const double maxPt);
 vector<double> calcDPhi(const vector<TLorentzVector> &inputJets, 
 		const double metphi, const int nDPhi, const double *jetCutsArr);
+
+
+
+vector<TH1D*> h1_metVec, h1_metphiVec;
+vector<TH1D*> h1_met_allhadVec, h1_metphi_allhadVec;
+vector<TH1D*> h1_met_leptonicVec, h1_metphi_leptonicVec;
+
+vector<TH1D*> h1_nJetsVec, h1_nJets_allhadVec, h1_nJets_leptonicVec;
+vector<TH1D*> h1_vtxSizeVec;
+
 
 int countJets(const vector<TLorentzVector> &inputJets, const double minAbsEta, const double maxAbsEta, const double minPt, const double maxPt){
 
@@ -106,13 +116,10 @@ vector<double> calcDPhi(const vector<TLorentzVector> &inputJets,
 	return calcDPhi(inputJets, metphi, nDPhi, jetCutsArr[0], jetCutsArr[1], jetCutsArr[2], jetCutsArr[3]);
 }
 
-
 // need to check if trees with different cycles gets attached or not!!
 //Long64_t LoadTree(Long64_t entry);
 
-/***************************************/
-/* entry point and looping over events */
-/***************************************/
+
 int main(int argc, char* argv[])
 {
 
@@ -130,16 +137,16 @@ int main(int argc, char* argv[])
 	const char *evt2Proc      = argv[3];
 
 	int evts    = -1;
-	int systematic_var = 0;
 
 	if (isdigit(evt2Proc[0]))
 	{
 		int num = atoi(argv[3]);
 		if (num>=1) evts = num;
-		if (bVERBOSE) cout << __FUNCTION__ << ": evts = " << evts << endl;
+		if (verbose) cout << __FUNCTION__ << ": evts = " << evts << endl;
 	} else {
 		cout << "argument 3 is not a number. using default value for evts = " << evts << endl;
 	}
+	const int iEVTS_TO_PROCESS = evts;
 
 
 	/* check the input file and read in the contents and attach all the files to TChain (almost like TTree) */
@@ -162,13 +169,13 @@ int main(int argc, char* argv[])
 	while(1) {
 		infile >> buffer;
 		if(!infile.good()) break;
-		if (bVERBOSE) std::cout << "Adding tree from " << buffer.c_str() << std::endl;                                                              
+		if (verbose) std::cout << "Adding tree from " << buffer.c_str() << std::endl;                                                              
 		TFile *f = new TFile(buffer.c_str());
 		if (f->IsZombie()) { cout << buffer << " file not found!" << endl; }
 		delete f;
 		chain->Add(buffer.c_str());
 	}
-	if (bVERBOSE) chain->Print();
+	if (verbose) chain->Print();
 	std::cout << "No. of Entries in this tree = " << chain->GetEntries() << std::endl;
 
 
@@ -180,13 +187,16 @@ int main(int argc, char* argv[])
 	int nJets;
 	double evtWeight;
 	double met, metphi;
+
 	int nMuons, nElectrons;
-	vector<TLorentzVector> *oriJetsVec = new vector<TLorentzVector>(); 
-	vector<double> *recoJetsBtagCSVS = new vector<double>();
+
+	vector<TLorentzVector> *oriJetsVec = new vector<TLorentzVector>(); vector<double> *recoJetsBtagCSVS = new vector<double>();
+
 	vector<TLorentzVector> *genDecayLVec =0;
 	vector<int> *genDecayPdgIdVec =0, *genDecayIdxVec =0, *genDecayMomIdxVec =0;
 	vector<string> *genDecayStrVec =0, *smsModelFileNameStrVec =0, *smsModelStrVec =0;
 	double smsModelMotherMass, smsModelDaughterMass;
+
 	vector<TLorentzVector> *genJetsLVec_myak5GenJetsNoNu =0, *genJetsLVec_myak5GenJetsNoNuNoStopDecays =0, *genJetsLVec_myak5GenJetsNoNuOnlyStopDecays =0;
 
 
@@ -223,7 +233,7 @@ int main(int argc, char* argv[])
 
 	/*quick sanity check to count how many entries are in ALL the trees in the TChain 
 	 */
-	int Entries = chain->GetEntries();
+	const int Entries = chain->GetEntries();
 	std::cout<<"\n\n"<<"Entries : "<<Entries<<std::endl;
 
 
@@ -246,7 +256,7 @@ int main(int argc, char* argv[])
 
 
 
-	for(int ie=0; ie<Entries; ie++){
+	for(int ie=0; ie< min(Entries, iEVTS_TO_PROCESS); ie++){
 
 		chain->GetEntry(ie);
 
@@ -256,24 +266,26 @@ int main(int argc, char* argv[])
 			std::cout<<"oriJetsVec->size : "<<oriJetsVec->size()<<"  recoJetsBtagCSVS : "<<recoJetsBtagCSVS->size()<<std::endl;
 		}
 
+		TLorentzVector metLVec; metLVec.SetPtEtaPhiM(met, 0, metphi, 0);
 
 		int cntNJetsPt30 = countJets((*oriJetsVec), pt30Arr);
 		int cntNJetsPt30Eta24 = countJets((*oriJetsVec), pt30Eta24Arr);
 		int cntNJetsPt50Eta24 = countJets((*oriJetsVec), pt50Eta24Arr);
 		int cntNJetsPt70Eta24 = countJets((*oriJetsVec), pt70Eta24Arr);
 		vector<double> dPhiVec = calcDPhi((*oriJetsVec), metphi, 3, dphiArr);
-		TLorentzVector metLVec; metLVec.SetPtEtaPhiM(met, 0, metphi, 0);
+
 		double dPhi0 = dPhiVec[0], dPhi1 = dPhiVec[1], dPhi2 = dPhiVec[2];
 
+		bool passExtraCuts = true;
 		bool passnJets = true, passdPhis = true, passBJets = true, passMET = true;
 
-		//if( cntNJetsPt70Eta24 < nJetsSelPt70Eta24 ){ passnJets = false; }   # these are specific to Stop
-		if( cntNJetsPt50Eta24 < nJetsSelPt50Eta24 ){ passnJets = false; }
-		//if( cntNJetsPt30Eta24 < nJetsSelPt30Eta24 ){ passnJets = false; }	# these are specific to Stop
+		if( cntNJetsPt70Eta24 < nJetsSelPt70Eta24 ){ passExtraCuts = false; passnJets = false; }
+		if( cntNJetsPt50Eta24 < nJetsSelPt50Eta24 ){ passExtraCuts = false; passnJets = false; }
+		if( cntNJetsPt30Eta24 < nJetsSelPt30Eta24 ){ passExtraCuts = false; passnJets = false; }
 
-		if( dPhi0 < 0.5 || dPhi1 < 0.5 || dPhi2 < 0.3 ){ passdPhis = false; }
+		if( dPhi0 < 0.5 || dPhi1 < 0.5 || dPhi2 < 0.3 ){ passExtraCuts = false; passdPhis = false; }
 
-		if( !( (minMETcut == -1 || met >= minMETcut ) && (maxMETcut == -1 || met < maxMETcut) ) ){ passMET = false; }
+		if( !( (minMETcut == -1 || met >= minMETcut ) && (maxMETcut == -1 || met < maxMETcut) ) ){ passExtraCuts = false; passMET = false; }
 
 		// Parsing the gen information ...
 		int cntgenTop = 0, cntleptons =0;
@@ -284,44 +296,40 @@ int main(int argc, char* argv[])
 			if( abs(pdgId) == 11 || abs(pdgId) == 13 || abs(pdgId) == 15 ) cntleptons++;
 		}
 
+		//h1_vtxSize->Fill(vtxSize);
+		h1_nJets->Fill(cntNJetsPt30Eta24);
+		h1_met->Fill(met);
+		h1_metphi->Fill(metphi);
 
-
-		/* apply your preselection cuts here, like njets cut */
-
-		if (passnJets)    //has minimum num. of jets 
-		{
-			/*plot with both real and fake met */
-			//h1_vtxSize->Fill(vtxSize);
-			h1_nJets->Fill(cntNJetsPt30Eta24); 
-			h1_met->Fill(met);
-			h1_metphi->Fill(metphi);
-
-			if( cntleptons ==0 ){ 			/*plot with fake met only*/
-				h1_nJets_allhad->Fill(cntNJetsPt30Eta24);
-				h1_met_allhad->Fill(met);
-				h1_metphi_allhad->Fill(metphi);
-			}else{								/*plot with real met only*/
-				h1_nJets_leptonic->Fill(cntNJetsPt30Eta24);
-				h1_met_leptonic->Fill(met);
-				h1_metphi_leptonic->Fill(metphi);
-			}
+		if( cntleptons ==0 ){
+			h1_nJets_allhad->Fill(cntNJetsPt30Eta24);
+			h1_met_allhad->Fill(met);
+			h1_metphi_allhad->Fill(metphi);
+		}else{
+			h1_nJets_leptonic->Fill(cntNJetsPt30Eta24);
+			h1_met_leptonic->Fill(met);
+			h1_metphi_leptonic->Fill(metphi);
 		}
 
-
-		/* prints generator level info */
-		if (bVERBOSE){
+		if( verbose >=1 ){
 			std::cout<<"\nie : "<<ie<<std::endl; 
 			std::cout<<"genDecayStr : "<<genDecayStrVec->front().c_str()<<std::endl;
 			for(int iv=0; iv<(int)genDecayLVec->size(); iv++){
 				int pdgId = genDecayPdgIdVec->at(iv);
-				//printf("((%d,%d/%d):(%6.2f/%6.2f))  ", pdgId, genDecayIdxVec->at(iv), 
-				//		genDecayMomIdxVec->at(iv), 
-				//		genDecayLVec->at(iv).E(), genDecayLVec->at(iv).Pt());
+				printf("((%d,%d/%d):(%6.2f/%6.2f))  ", pdgId, genDecayIdxVec->at(iv), genDecayMomIdxVec->at(iv), genDecayLVec->at(iv).E(), genDecayLVec->at(iv).Pt());
 			}
 		}
 	}
 
-	cout << "verbose = " << bVERBOSE << endl;
+
+	/********************** JOB SUMMARY *******************************/
+	cout << "\n -------------- SUMMARY -------------" << endl;
+	cout << "  Processed file list = " << inputFileList << endl;
+	cout << "  Output written to   = " << outFileName << endl;
+	cout << "  Processed events    = " << iEVTS_TO_PROCESS <<  " ( out of " << Entries << ")" << endl;
+	cout << " -------------- SUMMARY -------------\n\n" << endl;
+	
+
 	/* clean up */
 	outFile->Write();
 	outFile->Close();
