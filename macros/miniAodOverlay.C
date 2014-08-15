@@ -9,6 +9,7 @@
 #include "TF1.h"
 #include "TLegend.h"
 #include <iomanip>
+#include <utility>
 #include <algorithm>
 
 using namespace std;
@@ -16,6 +17,38 @@ using namespace std;
 /* Global variables defining input histograms */
 const static string s8TeV_FILE_NAME   = "data/TTbar_8TeV.root"; 
 const static string s13TeV_FILE_NAME  = "data/TTbar_13TeV.root"; 
+
+class HistInfo {
+	public:
+		HistInfo(const string histname_, const int rebin_=1, const bool logscale_ = true) {
+			name = histname_;
+			rebin = rebin_;
+			logScale = logscale_;
+		};
+		HistInfo(vector<TFile*> files_,
+				const string fullPath_,
+				const string titleText_,
+				const vector<string> legTexts_,
+				const int rebin_,
+				const int logScale_) {
+			files = files_;
+			fullPath = fullPath_;
+			titleText = titleText_;
+			legTexts = legTexts_;
+			rebin = rebin_;
+			logScale = logScale_;
+		};
+
+		vector<TFile*> files;
+		string name, fullPath, titleText, epsName; 
+		vector<string> legTexts;
+		int rebin; 
+		vector<int> lineColors, markerColors, markerStyles;
+		bool logScale;
+		vector<TH1*> hists;
+	
+};
+
 
 
 /**************************************
@@ -53,63 +86,41 @@ void ScaleHist(TH1* h, const int rebin) {
  * Open files, read histograms, 
  * set aesthetics, draw, and print
  *************************************/
-void miniAodOverlay(const string name8TeV, const string name13TeV, 
-						const string title, 
-						const int rebin=1, const string epsname="out.eps", 
-						const bool logScale =1) 
+void miniAodOverlay(HistInfo histInfo) 
 {
-	TFile* rootFile8TeV = new TFile (s8TeV_FILE_NAME.c_str());
-	if (rootFile8TeV->IsZombie())
-	{
-		cout << "8 TeV ROOT file not found!" <<  endl;
-		assert (false);
-	}
 
-	TFile* rootFile13TeV = new TFile (s13TeV_FILE_NAME.c_str());
-	if (rootFile13TeV->IsZombie())
-	{
-		cout << "13 TeV ROOT file not found!" <<  endl;
-		assert (false);
-	}
-
-	/* Generate complete path with hist name */
-	stringstream s8TeVHistPath, s13TeVHistPath;
-	s13TeVHistPath << "/CfiFile/" << name13TeV;
-	s8TeVHistPath  << "/Factorization/HT0to5000/" << name8TeV;
-
-	TH1* hist8TeV = dynamic_cast<TH1*> (rootFile8TeV->Get(s8TeVHistPath.str().c_str()));
-	if (hist8TeV == NULL) { cout << "ERR: 8 TeV hist " << s8TeVHistPath.str() << " not found!" << endl; assert (false); }
-
-	TH1* hist13TeV = dynamic_cast<TH1*> (rootFile13TeV->Get(s13TeVHistPath.str().c_str()));
-	if (hist13TeV == NULL) { cout << "ERR: 13 TeV hist " << s13TeVHistPath.str() << " not found!" << endl; assert (false); }
-
-	/* now normalize hist to 1.0 */
-	ScaleHist(hist8TeV, rebin);
-	ScaleHist(hist13TeV, rebin);
-
-	/* make them pretty */
-	const int i8TeVColor  = 4;
-	const int i13TeVColor = 6;
-
-	hist8TeV->SetLineColor(i8TeVColor);
-	hist13TeV->SetLineColor(i13TeVColor);
-	hist8TeV->SetTitle(title.c_str());
-
-	/* add a legend */
-	TLegend *leg1  = new TLegend(0.6,0.75,0.9,0.9);
-	leg1->AddEntry(hist8TeV,  "t#bar{t} (8 TeV)");
-	leg1->AddEntry(hist13TeV, "t#bar{t} (13 TeV)");
 
 	/* create new canvas and draw */
-	new TCanvas();
+	TCanvas *c1 = new TCanvas();
 	gStyle->SetOptStat(0);
-	gPad->SetLogy();
 	gPad->SetTickx();
 	gPad->SetTicky();
-	hist8TeV->Draw("LF2");
-	hist13TeV->Draw("same");
-	leg1->Draw();
-	gPad->Print(epsname.c_str());
+
+
+	TLegend *leg  = new TLegend(0.6,0.75,0.9,0.9);
+					cout << __LINE__ << endl;
+	for (int i =0; i< (histInfo.files).size(); ++i)
+	{
+		TH1 *h = dynamic_cast<TH1*> ((histInfo.files.at(i))->Get( (histInfo.fullPath).c_str()));
+		if (h == NULL) { cout << "Hist " << histInfo.fullPath << " not in " << (histInfo.files.at(i))->GetName() << endl; assert(false); }
+		h->Print();
+
+		h->Rebin(histInfo.rebin);
+		h->SetLineWidth(2);
+		h->SetLineColor(histInfo.lineColors.at(i));
+		h->SetMarkerColor(histInfo.markerColors.at(i));
+		h->SetTitle(histInfo.titleText.c_str());
+		h->Scale(1.0/(1.0* h->Integral()));
+		leg->AddEntry(h, histInfo.legTexts.at(i).c_str());
+		
+		histInfo.hists.push_back(h);
+
+		if (i==0) h->Draw();
+		else h->Draw("same");
+	}
+	gPad->SetLogy(histInfo.logScale);
+	leg->Draw();
+	gPad->Print(histInfo.epsName.c_str());
 
 }
 
@@ -117,10 +128,103 @@ void miniAodOverlay(const string name8TeV, const string name13TeV,
  * This is the entry point to the code.
  * This method is overloaded
  *************************************/
-void miniAodOverlay()
+int miniAodOverlay()
 {
+
+	std::vector<std::pair<unsigned, unsigned> > vHtBins, vJetBins;
+	const char* metTypeArr[] = {"metall","methad","metlep"};
+	const vector<string> svMetType(metTypeArr, metTypeArr+3);       //all met/ all hadmet(fake-met)/ leptonic met (true met)
+	vHtBins.push_back(make_pair(0,10000));
+	//vHtBins.push_back(make_pair(500,1000));
+	//vHtBins.push_back(make_pair(1000,2000));
+	//vHtBins.push_back(make_pair(2000,10000));
+	//vMetBins.push_back(make_pair(0,10));
+	vJetBins.push_back(make_pair(0,40));
+	//vJetBins.push_back(make_pair(3,5));
+	//vJetBins.push_back(make_pair(6,7));
+	//vJetBins.push_back(make_pair(8,40));
+
+	vector<TFile*> vFiles;
+	TFile *f8tev = new TFile("data/TTbar_8TeV.root");
+	TFile *f13tev50bx = new TFile("data/TTbar_13TeV_PUS13_50bx.root");
+	TFile *f13tev25bx = new TFile("data/TTbar_13TeV_PU20_25bx.root");
+
+	if (! f8tev->IsOpen()) { cout << "8tev file not found!" << endl; return 1; }
+	if (! f13tev50bx->IsOpen()) { cout << "13tev50bx file not found!" << endl; return 1; }
+	if (! f13tev25bx->IsOpen()) { cout << "13tev25bx file not found!" << endl; return 1; }
+	
+	vFiles.push_back(f8tev);
+	vFiles.push_back(f13tev50bx);
+	vFiles.push_back(f13tev25bx);
+
+	vector<string> vLegTexts;
+	vLegTexts.push_back("8 TeV");
+	vLegTexts.push_back("13 TeV 50bx");
+	vLegTexts.push_back("13 TeV 25bx");
+	
+
+	vector<int> lineCols, markerCols ,markerStls;
+	lineCols.push_back(2);
+	lineCols.push_back(3);
+	lineCols.push_back(4);
+	markerCols = lineCols;
+	markerStls.push_back(12);
+	markerStls.push_back(13);
+	markerStls.push_back(14);
+
+
+	vector<HistInfo> vHist;
+	vHist.push_back(HistInfo("ht", 2, 1));
+	vHist.push_back(HistInfo("met", 2));
+	vHist.push_back(HistInfo("metphi", 2));
+	//vHist.push_back(HistInfo("mht", 1));
+	//vHist.push_back(HistInfo("mhtphi", 1));
+	vHist.push_back(HistInfo("jet1_pt", 2));
+	vHist.push_back(HistInfo("jet1_eta", 1));
+	vHist.push_back(HistInfo("jet1_phi", 2));
+	vHist.push_back(HistInfo("jet1_dphimet", 2));
+
+	for (unsigned mt =0;  mt< svMetType.size(); ++mt)
+	{
+		for (unsigned jetbin=0; jetbin< vJetBins.size(); ++jetbin)
+		{
+			const int jlo = vJetBins.at(jetbin).first;
+			const int jhi = vJetBins.at(jetbin).second;
+
+			for (unsigned htbin=0; htbin< vHtBins.size(); ++htbin)
+			{
+				const int htlo = vHtBins.at(htbin).first;
+				const int hthi = vHtBins.at(htbin).second;
+
+				for (int ihist = 0; ihist < vHist.size(); ++ihist)
+				{
+					string metType = "", forEPSname="";
+					if (mt == 0) { metType += "All MET Types"; forEPSname += "all";}
+					else if (mt == 1) { metType += "Had MET Only"; forEPSname += "had";}
+					else if (mt == 2) { metType += "Leptonic MET Only"; forEPSname += "lep";}
+
+					stringstream path, title, epsname;
+					path << svMetType.at(mt) <<"/Jets"<< jlo <<"to" << jhi << "HT" << htlo << "to"  << hthi << "/" << vHist.at(ihist).name;
+					title << metType << ", Jets[" << jlo <<"," << jhi << "], HT[" << htlo << "," << hthi << "]";
+					epsname << vHist.at(ihist).name << "_" << forEPSname << "_jets" << jlo <<"to" << jhi << "ht" << htlo << "to" << hthi << ".eps";
+
+					vHist.at(ihist).files = vFiles;
+					vHist.at(ihist).epsName = epsname.str();
+					vHist.at(ihist).fullPath = path.str();
+					vHist.at(ihist).titleText = title.str();
+					vHist.at(ihist).legTexts = vLegTexts;
+					vHist.at(ihist).lineColors = lineCols;
+					vHist.at(ihist).markerColors = markerCols;
+					vHist.at(ihist).markerStyles = markerStls;
+					miniAodOverlay(vHist.at(ihist));
+
+				}
+			}
+		}
+	}
+
 	bool logScale = 1; int rebin = 2;
-	miniAodOverlay("jet1_pt", "nLeadPt"  , "P_{T} of Lead Jet^{P_{T}>50 & |#eta | < 2.5};P_{T} [GeV];Fraction of Events;"    , rebin, "Jet1Pt.eps", logScale);
+	/*miniAodOverlay("jet1_pt", "nLeadPt"  , "P_{T} of Lead Jet^{P_{T}>50 & |#eta | < 2.5};P_{T} [GeV];Fraction of Events;"    , rebin, "Jet1Pt.eps", logScale);
 	miniAodOverlay("jet2_pt", "nSecondPt", "P_{T} of 2nd Lead Jet^{P_{T}>50 & |#eta |<2.5};P_{T} [GeV];Fraction of Events;", rebin, "Jet2Pt.eps", logScale);
 	miniAodOverlay("jet3_pt", "nThirdPt" , "P_{T} of 3rd Lead Jet^{P_{T}>50 & |#eta |<2.5};P_{T} [GeV];Fraction of Events;", rebin, "Jet3Pt.eps", logScale);
 	logScale = 0; rebin = 2;
@@ -141,4 +245,7 @@ void miniAodOverlay()
 //	miniAodOverlay("njet50", "njet50" , ";Jet Multiplicity;# of Jets [P_{T}>50 & |#eta | < 2.5];Fraction of Events;", rebin, "njet50.eps", logScale);
 //	miniAodOverlay("njet30", "njet30" , ";Jet Multiplicity;# of Jets [P_{T}>30 & |#eta | < 5.0];Fraction of Events;", rebin, "njet30.eps", logScale);
 //	miniAodOverlay("pfht", "ht" , ";;Fraction of Events;", rebin, ".eps", logScale);
+
+*/
+	return 0;
 }
