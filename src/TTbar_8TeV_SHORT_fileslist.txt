@@ -1,0 +1,10 @@
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_1_1_AQv.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_2_1_cP4.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_3_1_zqf.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_4_1_Q3V.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_5_1_z4h.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_6_1_yX2.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_7_1_HwY.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_8_1_w4T.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_9_1_Uq3.root
+root://cmseos:1094//eos/uscms/store/user/lpcsusyhad/CSA14/8TeV_TTJets/stdStopHistAndTree_10_1_ius.root
