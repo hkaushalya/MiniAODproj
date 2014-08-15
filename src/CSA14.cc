@@ -35,12 +35,12 @@
 using namespace std;
 
 static const bool verbose = false;
-static const double      pt30Arr[] = {   -1,        -1,      30,    -1  };
+//static const double      pt30Arr[] = {   -1,        -1,      30,    -1  };
 static const double pt30Eta50Arr[] = {   -1,       5.0,      30,    -1  };
 static const double pt50Eta25Arr[] = {   -1,       2.5,      50,    -1  };
-static const double pt70Eta24Arr[] = {   -1,       2.4,      70,    -1  };
-static const double      dphiArr[] = {   -1,       4.7,      30,    -1  };
-static const double      bTagArr[] = {   -1,       2.4,      30,    -1  };
+//static const double pt70Eta24Arr[] = {   -1,       2.4,      70,    -1  };
+static const double      dphiArr[] = {   -1,       5.0,      30,    -1  };
+//static const double      bTagArr[] = {   -1,       2.4,      30,    -1  };
 static const int nJetsSel = 0, nJetsSelPt30Eta24 = 0, nJetsSelPt50Eta24 = 3, nJetsSelPt70Eta24 = 0;
 const double minMETcut = 0, maxMETcut = -1;
 
@@ -59,14 +59,14 @@ CSA14::CSA14()
 	outFile = 0;
 	chain = 0;
 	vHtBins.push_back(make_pair(0,10000));
-	//vHtBins.push_back(make_pair(500,1000));
-	//vHtBins.push_back(make_pair(1000,2000));
-	//vHtBins.push_back(make_pair(2000,10000));
+	vHtBins.push_back(make_pair(500,1000));
+	vHtBins.push_back(make_pair(1000,2000));
+	vHtBins.push_back(make_pair(2000,10000));
 	//vMetBins.push_back(make_pair(0,10));
-	vJetBins.push_back(make_pair(0,20));
-	//vJetBins.push_back(make_pair(3,5));
-	//vJetBins.push_back(make_pair(5,7));
-	//vJetBins.push_back(make_pair(8,1000));
+	vJetBins.push_back(make_pair(0,40));
+	vJetBins.push_back(make_pair(3,5));
+	vJetBins.push_back(make_pair(6,7));
+	vJetBins.push_back(make_pair(8,40));
 
 }
 
@@ -216,7 +216,7 @@ int CSA14::Process(const string inputFileList, const string outFileName, const i
 	double avg_npv, tru_npv;
 	int nJets;
 	double evtWeight;
-	double ht, met, metphi, type1metphi;
+	double ht, met, metphi, type1metphi, mht, mhtphi;
 	int nMuons, nElectrons;
 	vector<TLorentzVector> *oriJetsVec = new vector<TLorentzVector>(); 
 	vector<double> *recoJetsBtagCSVS = new vector<double>();
@@ -249,6 +249,8 @@ int CSA14::Process(const string inputFileList, const string outFileName, const i
 	chain->SetBranchStatus("met", 1); chain->SetBranchAddress("met", &met);
 	chain->SetBranchStatus("metphi", 1); chain->SetBranchAddress("metphi", &metphi);
 	chain->SetBranchStatus("type1metphi", 1); chain->SetBranchAddress("type1metphi", &type1metphi);  //uncorrected metphi
+	chain->SetBranchStatus("mht", 1); chain->SetBranchAddress("mht", &mht);
+	chain->SetBranchStatus("mhtphi", 1); chain->SetBranchAddress("mhtphi", &mhtphi);
 	chain->SetBranchStatus("nMuons", 1); chain->SetBranchAddress("nMuons", &nMuons);
 	chain->SetBranchStatus("nElectrons", 1); chain->SetBranchAddress("nElectrons", &nElectrons);
 	chain->SetBranchStatus("genDecayLVec", 1); chain->SetBranchAddress("genDecayLVec", &genDecayLVec);
@@ -275,38 +277,30 @@ int CSA14::Process(const string inputFileList, const string outFileName, const i
 		}
 
 		TLorentzVector metLVec; metLVec.SetPtEtaPhiM(met, 0, metphi, 0);
+		TLorentzVector mhtLVec; mhtLVec.SetPtEtaPhiM(mht, 0, mhtphi, 0);
 
 		//cout << "\tentry " << ie << endl;
-		//int cntNJetsPt30 = countJets((*oriJetsVec), pt30Arr);
-		int cntNJetsPt30Eta50 = countJets((*oriJetsVec), pt30Eta50Arr);
-		int cntNJetsPt50Eta25 = countJets((*oriJetsVec), pt50Eta25Arr);
-		//int cntNJetsPt70Eta24 = countJets((*oriJetsVec), pt70Eta24Arr);
-		vector<double> dPhiVec = calcDPhi((*oriJetsVec), metphi, 3, dphiArr);
+		const int cntNJetsPt30Eta50 = countJets((*oriJetsVec), pt30Eta50Arr);
+		const int cntNJetsPt50Eta25 = countJets((*oriJetsVec), pt50Eta25Arr);
+		const vector<double> dPhiVec_met = calcDPhi((*oriJetsVec), metphi, 3, dphiArr);
+		const vector<double> dPhiVec_mht = calcDPhi((*oriJetsVec), mhtphi, 3, dphiArr);
 
-		double dPhi0 = dPhiVec[0], dPhi1 = dPhiVec[1], dPhi2 = dPhiVec[2];
+		const double dPhi0_met = dPhiVec_met[0], dPhi1_met = dPhiVec_met[1], dPhi2_met = dPhiVec_met[2];
+		const double dPhi0_mht = dPhiVec_mht[0], dPhi1_mht = dPhiVec_mht[1], dPhi2_mht = dPhiVec_mht[2];
 
 		bool passExtraCuts = true;
 		bool passnJets = true, passdPhis = true, passBJets = true, passMET = true;
 
-		//if( cntNJetsPt70Eta24 < nJetsSelPt70Eta24 ){ passExtraCuts = false; passnJets = false; }
-		//if( cntNJetsPt50Eta25 < nJetsSelPt50Eta24 ){ passExtraCuts = false; passnJets = false; }
-		//if( cntNJetsPt30Eta50 < nJetsSelPt30Eta24 ){ passExtraCuts = false; passnJets = false; }
-
-		//if( dPhi0 < 0.5 || dPhi1 < 0.5 || dPhi2 < 0.3 ){ passExtraCuts = false; passdPhis = false; }
-
-		//if( !( (minMETcut == -1 || met >= minMETcut ) && (maxMETcut == -1 || met < maxMETcut) ) ){ passExtraCuts = false; passMET = false; }
-
 		// Parsing the gen information ...
 		int cntgenTop = 0, cntleptons =0;
-
 		for(int iv=0; iv<(int)genDecayLVec->size(); iv++){
 			int pdgId = genDecayPdgIdVec->at(iv);
 			if( abs(pdgId) == 6 ) cntgenTop ++;
 			if( abs(pdgId) == 11 || abs(pdgId) == 13 || abs(pdgId) == 15 ) cntleptons++;
 		}
 
-	//	cout << "cntleptons/cntNJetsPt50Eta25/ht = " << cntleptons << " / " << cntNJetsPt50Eta25 << "/" << ht << endl;
-
+		//cout << "\ncntleptons/cntNJetsPt50Eta25/ht = " << cntleptons << " / " << cntNJetsPt50Eta25 << "/" << ht << endl;
+		//cout << "njets/ht = " << cntNJetsPt50Eta25 << "/" << ht <<endl;
 		for (int mt =0;  mt< svMetType.size(); ++mt)
 		{
 			if (mt==1 && cntleptons !=0) continue; //do not fill had-met with leptonic events
@@ -324,14 +318,40 @@ int CSA14::Process(const string inputFileList, const string outFileName, const i
 					const int hthi = vHtBins.at(htbin).second;
 					if (ht<htlo || ht>hthi) continue;
 
-					//cout << "Filling for mtbin,jetbin,htbin:" << mt << ", " << jetbin << ", " << htbin << endl; 
+					//cout << "\tFilling mtbin,jetbin,htbin:" << mt << ", " << jetbin << ", " << htbin << endl; 
 					const int idx = mt+jetbin+htbin;
-					vHist.at(idx).h1_nVtx->Fill(vtxSize);
-					vHist.at(idx).h1_nJets_pt30eta50->Fill(cntNJetsPt30Eta50);
-					vHist.at(idx).h1_nJets_pt50eta25->Fill(cntNJetsPt50Eta25);
-					vHist.at(idx).h1_met->Fill(met);
-					vHist.at(idx).h1_metphi->Fill(metphi);
-					vHist.at(idx).h1_uncorrmetphi->Fill(type1metphi);
+					vHist.at(mt).at(jetbin).at(htbin).h1_nVtx->Fill(vtxSize);
+					vHist.at(mt).at(jetbin).at(htbin).h1_ht->Fill(ht);
+					vHist.at(mt).at(jetbin).at(htbin).h1_nJets_pt30eta50->Fill(cntNJetsPt30Eta50);
+					vHist.at(mt).at(jetbin).at(htbin).h1_nJets_pt50eta25->Fill(cntNJetsPt50Eta25);
+					vHist.at(mt).at(jetbin).at(htbin).h1_met->Fill(met);
+					vHist.at(mt).at(jetbin).at(htbin).h1_metphi->Fill(metphi);
+					vHist.at(mt).at(jetbin).at(htbin).h1_mht->Fill(mht);
+					vHist.at(mt).at(jetbin).at(htbin).h1_mhtphi->Fill(mhtphi);
+					vHist.at(mt).at(jetbin).at(htbin).h1_uncorrmetphi->Fill(type1metphi);
+					//Fill jet histograms
+					if (oriJetsVec->size()>=1) {
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet1_pt->Fill(oriJetsVec->at(0).Pt());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet1_eta->Fill(oriJetsVec->at(0).Eta());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet1_phi->Fill(oriJetsVec->at(0).Phi());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet1_dphimet->Fill(dPhi0_met);
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet1_dphimht->Fill(dPhi0_mht);
+					}
+					if (oriJetsVec->size()>=2) {
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet2_pt->Fill(oriJetsVec->at(1).Pt());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet2_eta->Fill(oriJetsVec->at(1).Eta());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet2_phi->Fill(oriJetsVec->at(1).Phi());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet2_dphimet->Fill(dPhi1_met);
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet2_dphimht->Fill(dPhi1_mht);
+					}
+					if (oriJetsVec->size()>=3) {
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet3_pt->Fill(oriJetsVec->at(2).Pt());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet3_eta->Fill(oriJetsVec->at(2).Eta());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet3_phi->Fill(oriJetsVec->at(2).Phi());
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet3_dphimet->Fill(dPhi2_met);
+						vHist.at(mt).at(jetbin).at(htbin).h1_jet3_dphimht->Fill(dPhi2_mht);
+					}
+
 				}
 			}
 		}
@@ -366,8 +386,9 @@ int CSA14::Process(const string inputFileList, const string outFileName, const i
 			{
 				for (int htbin=0; htbin< vHtBins.size(); ++htbin)
 				{
-					vHist.at(mt+jetbin+htbin).h1_nVtx->Print();
-					vHist.at(mt+jetbin+htbin).h1_met->Print();
+					cout << "\tmtbin,jetbin,htbin:" << mt << ", " << jetbin << ", " << htbin << endl; 
+					vHist.at(mt).at(jetbin).at(htbin).h1_nVtx->Print();
+					vHist.at(mt).at(jetbin).at(htbin).h1_met->Print();
 				}
 			}
 		}
@@ -375,7 +396,7 @@ int CSA14::Process(const string inputFileList, const string outFileName, const i
 }
 
 
-void CSA14::BookHistograms(const string outFileName, vector<Hist_t>& vHist)
+void CSA14::BookHistograms(const string outFileName, nestHistVec& vHist)
 {
 	vHist.clear();
 	/* create output file and add histograms to it */
@@ -386,11 +407,13 @@ void CSA14::BookHistograms(const string outFileName, vector<Hist_t>& vHist)
 		TDirectory *dir_0 = outFile->mkdir(svMetType.at(mt).c_str()); 
 		dir_0->cd();
 
+		vector <vector<Hist_t> > vJetBinnedHist; 
 		for (int jetbin=0; jetbin< vJetBins.size(); ++jetbin)
 		{
 			const int jlo = vJetBins.at(jetbin).first;
 			const int jhi = vJetBins.at(jetbin).second;
 
+			vector<Hist_t> vHtBinnedHist; 
 			for (int htbin=0; htbin< vHtBins.size(); ++htbin)
 			{
 				const int htlo = vHtBins.at(htbin).first;
@@ -403,79 +426,84 @@ void CSA14::BookHistograms(const string outFileName, vector<Hist_t>& vHist)
 
 				stringstream title_suffix;
 				title_suffix << svMetType.at(mt) << ", Jets["<< jlo <<"," << jhi << "], HT[" << htlo << "," << hthi << "]";
-			
-				stringstream tit_met, tit_metphi, tit_uncorrmetphi, tit_njetpt30, tit_njetpt50, tit_nvtx;
+
+				stringstream tit_ht, tit_mht, tit_mhtphi, tit_met, tit_metphi, tit_uncorrmetphi, tit_njetpt30, tit_njetpt50, tit_nvtx;
 				stringstream tit_jet1_pt, tit_jet2_pt, tit_jet3_pt;
 				stringstream tit_jet1_eta, tit_jet2_eta, tit_jet3_eta;
 				stringstream tit_jet1_phi, tit_jet2_phi, tit_jet3_phi;
+				stringstream tit_jet1_dphimet, tit_jet2_dphimet, tit_jet3_dphimet;
+				stringstream tit_jet1_dphimht, tit_jet2_dphimht, tit_jet3_dphimht;
 
+				tit_ht << title_suffix.str() << ";HT;Events;"; 
+				tit_mht << title_suffix.str() << ";MHT;Events;"; 
+				tit_mhtphi << title_suffix.str() << ";Corrected MHT-#Phi;Events;"; 
 				tit_met << title_suffix.str() << ";MET;Events;"; 
 				tit_metphi << title_suffix.str() << ";Corrected MET-#Phi;Events;"; 
-				tit_uncorrmetphi << title_suffix.str() << ";Uncorrected MET#Phi;Events;"; 
-				tit_njetpt30 << title_suffix.str() << ";Jets [Pt>30, |#Eta |< 5.0];Events;"; 
-				tit_njetpt50 << title_suffix.str() << ";Jets [Pt>50, |#Eta |< 2.5];Events;"; 
+				tit_uncorrmetphi << title_suffix.str() << ";Uncorrected MET-#Phi;Events;"; 
+				tit_njetpt30 << title_suffix.str() << ";Jets [Pt>30, |#eta |< 5.0];Events;"; 
+				tit_njetpt50 << title_suffix.str() << ";Jets [Pt>50, |#eta |< 2.5];Events;"; 
 				tit_nvtx << title_suffix.str() << ";Primary Vertices;Events;"; 
 
-				tit_jet1_pt << title_suffix.str() << ";Lead Jet Pt [Pt>30, |#eta |< 5.0];Events;"; 
-				tit_jet2_pt << title_suffix.str() << ";2nd Lead Jet Pt [Pt>30, |#eta |< 5.0];Events;"; 
-				tit_jet3_pt << title_suffix.str() << ";3rd Lead Jet Pt [Pt>30, |#eta |< 5.0];Events;"; 
+				tit_jet1_pt << title_suffix.str() << ";Pt of Lead Jet^{Pt>30, |#eta |<5.0};Events;"; 
+				tit_jet2_pt << title_suffix.str() << ";Pt of 2nd Lead Jet^{Pt>30, |#eta |<5.0};Events;"; 
+				tit_jet3_pt << title_suffix.str() << ";Pt of 3rd Lead Jet^{Pt>30, |#eta |<5.0};Events;"; 
 
-				tit_jet1_eta << title_suffix.str() << ";Lead Jet #eta [Pt >30, |#eta |< 5.0];Events;"; 
-				tit_jet2_eta << title_suffix.str() << ";2nd Lead Jet #eta [Pt >30, |#eta |< 5.0];Events;"; 
-				tit_jet3_eta << title_suffix.str() << ";3rd Lead Jet #eta [Pt >30, |#eta |< 5.0];Events;"; 
+				tit_jet1_eta << title_suffix.str() << ";#eta Lead Jet^{Pt >30, |#eta |<5.0};Events;"; 
+				tit_jet2_eta << title_suffix.str() << ";#eta 2nd Lead Jet^{Pt >30, |#eta |<5.0};Events;"; 
+				tit_jet3_eta << title_suffix.str() << ";#eta 3rd Lead Jet^{Pt >30, |#eta |<5.0};Events;"; 
 
-				tit_jet1_phi << title_suffix.str() << ";Lead Jet #Phi [Pt>30, |#eta |< 5.0];Events;"; 
-				tit_jet2_phi << title_suffix.str() << ";2nd Lead Jet #Phi [Pt>30, |#eta |< 5.0];Events;"; 
-				tit_jet3_phi << title_suffix.str() << ";3rd Lead Jet #Phi [Pt>30, |#eta |< 5.0];Events;"; 
+				tit_jet1_phi << title_suffix.str() << ";#Phi of Lead Jet^{Pt>30, |#eta |<5.0};Events;"; 
+				tit_jet2_phi << title_suffix.str() << ";#Phi of 2nd Lead Jet^{Pt>30, |#eta |<5.0};Events;"; 
+				tit_jet3_phi << title_suffix.str() << ";#Phi of 3rd Lead Jet^{Pt>30, |#eta |<5.0};Events;"; 
+
+				tit_jet1_dphimet << title_suffix.str() << ";#delta#Phi (#slash{E}_{T}, Lead Jet^{Pt>30, |#eta |<5.0});Events;"; 
+				tit_jet2_dphimet << title_suffix.str() << ";#delta#Phi (#slash{E}_{T}, 2nd Lead Jet^{Pt>30, |#eta |<5.0});Events;"; 
+				tit_jet3_dphimet << title_suffix.str() << ";#delta#Phi (#slash{E}_{T}, 3rd Lead Jet^{Pt>30, |#eta |<5.0});Events;"; 
+
+				tit_jet1_dphimht << title_suffix.str() << ";#delta#Phi (MHT, Lead Jet^{Pt>30, |#eta |<5.0});Events;"; 
+				tit_jet2_dphimht << title_suffix.str() << ";#delta#Phi (MHT, 2nd Lead Jet^{Pt>30, |#eta |<5.0});Events;"; 
+				tit_jet3_dphimht << title_suffix.str() << ";#delta#Phi (MHT, 3rd Lead Jet^{Pt>30, |#eta |<5.0});Events;"; 
 
 
 				Hist_t hist;
-				hist.h1_met = new TH1D("met", tit_met.str().c_str(), 100, 0, 1000); hist.h1_met->Sumw2();
-				hist.h1_metphi = new TH1D("metphi", tit_metphi.str().c_str(), 100, -3.2, 3.2); hist.h1_metphi->Sumw2();
-				hist.h1_uncorrmetphi = new TH1D("uncorrmetphi", tit_uncorrmetphi.str().c_str(), 100, -3.2, 3.2); hist.h1_uncorrmetphi->Sumw2();
+				hist.h1_nVtx 	= new TH1D("nVtx", tit_nvtx.str().c_str(), 100, 0, 100); hist.h1_nVtx->Sumw2();
+				hist.h1_ht 	= new TH1D("ht", tit_ht.str().c_str(), 160, 0, 8000); hist.h1_ht->Sumw2();
+				hist.h1_met 	= new TH1D("met", tit_met.str().c_str(), 150, 0, 1500); hist.h1_met->Sumw2();
+				hist.h1_metphi = new TH1D("metphi", tit_metphi.str().c_str(), 140, -3.5, 3.5); hist.h1_metphi->Sumw2();
+				hist.h1_mht 	= new TH1D("mht", tit_mht.str().c_str(), 150, 0, 1500); hist.h1_mht->Sumw2();
+				hist.h1_mhtphi = new TH1D("mhtphi", tit_mhtphi.str().c_str(), 140, -3.5, 3.5); hist.h1_mhtphi->Sumw2();
+				hist.h1_uncorrmetphi 	= new TH1D("uncorrmetphi", tit_uncorrmetphi.str().c_str(), 140, -3.5, 3.5); hist.h1_uncorrmetphi->Sumw2();
 				hist.h1_nJets_pt30eta50 = new TH1D("nJets_pt30eta50", tit_njetpt30.str().c_str(), 20, 0, 20); hist.h1_nJets_pt30eta50->Sumw2();
 				hist.h1_nJets_pt50eta25 = new TH1D("nJets_pt50eta25", tit_njetpt50.str().c_str(), 20, 0, 20); hist.h1_nJets_pt50eta25->Sumw2();
-				hist.h1_nVtx = new TH1D("nVtx", tit_nvtx.str().c_str(), 100, 0, 100); hist.h1_nVtx->Sumw2();
 
 				hist.h1_jet1_pt = new TH1D("jet1_pt", tit_jet1_pt.str().c_str(), 100, 0, 1000); hist.h1_jet1_pt->Sumw2();
 				hist.h1_jet2_pt = new TH1D("jet2_pt", tit_jet2_pt.str().c_str(), 100, 0, 1000); hist.h1_jet2_pt->Sumw2();
 				hist.h1_jet3_pt = new TH1D("jet3_pt", tit_jet3_pt.str().c_str(), 100, 0, 1000); hist.h1_jet3_pt->Sumw2();
 
-				hist.h1_jet1_eta = new TH1D("jet1_eta", tit_jet1_eta.str().c_str(), 10, -5, 5); hist.h1_jet1_eta->Sumw2();
-				hist.h1_jet2_eta = new TH1D("jet2_eta", tit_jet2_eta.str().c_str(), 10, -5, 5); hist.h1_jet2_eta->Sumw2();
-				hist.h1_jet3_eta = new TH1D("jet3_eta", tit_jet3_eta.str().c_str(), 10, -5, 5); hist.h1_jet3_eta->Sumw2();
+				hist.h1_jet1_eta = new TH1D("jet1_eta", tit_jet1_eta.str().c_str(), 24, -6, 6); hist.h1_jet1_eta->Sumw2();
+				hist.h1_jet2_eta = new TH1D("jet2_eta", tit_jet2_eta.str().c_str(), 24, -6, 6); hist.h1_jet2_eta->Sumw2();
+				hist.h1_jet3_eta = new TH1D("jet3_eta", tit_jet3_eta.str().c_str(), 24, -6, 6); hist.h1_jet3_eta->Sumw2();
 
 				hist.h1_jet1_phi = new TH1D("jet1_phi", tit_jet1_phi.str().c_str(), 140, -3.5, 3.5); hist.h1_jet1_phi->Sumw2();
 				hist.h1_jet2_phi = new TH1D("jet2_phi", tit_jet2_phi.str().c_str(), 140, -3.5, 3.5); hist.h1_jet2_phi->Sumw2();
 				hist.h1_jet3_phi = new TH1D("jet3_phi", tit_jet3_phi.str().c_str(), 140, -3.5, 3.5); hist.h1_jet3_phi->Sumw2();
 
-				vHist.push_back(hist);	
+				hist.h1_jet1_dphimet = new TH1D("jet1_dphimet", tit_jet1_dphimet.str().c_str(), 70, 0, 3.5); hist.h1_jet1_dphimet->Sumw2();
+				hist.h1_jet2_dphimet = new TH1D("jet2_dphimet", tit_jet2_dphimet.str().c_str(), 70, 0, 3.5); hist.h1_jet2_dphimet->Sumw2();
+				hist.h1_jet3_dphimet = new TH1D("jet3_dphimet", tit_jet3_dphimet.str().c_str(), 70, 0, 3.5); hist.h1_jet3_dphimet->Sumw2();
 
-			}
-		}
-	}
-/*
-	TH1D *h1_met = new TH1D("h1_met", "met; met", 100, 0, 1000); h1_met->Sumw2();
-	TH1D *h1_metphi = new TH1D("h1_metphi", "metphi; metphi", 100, -3.2, 3.2); h1_metphi->Sumw2();
-	TH1D *h1_uncorrmetphi = new TH1D("h1_uncorrmetphi", "Uncorrected metphi; Uncorrected metphi", 100, -3.2, 3.2); h1_uncorrmetphi->Sumw2();
+				hist.h1_jet1_dphimht = new TH1D("jet1_dphimht", tit_jet1_dphimht.str().c_str(), 70, 0, 3.5); hist.h1_jet1_dphimht->Sumw2();
+				hist.h1_jet2_dphimht = new TH1D("jet2_dphimht", tit_jet2_dphimht.str().c_str(), 70, 0, 3.5); hist.h1_jet2_dphimht->Sumw2();
+				hist.h1_jet3_dphimht = new TH1D("jet3_dphimht", tit_jet3_dphimht.str().c_str(), 70, 0, 3.5); hist.h1_jet3_dphimht->Sumw2();
 
-	TH1D *h1_met_allhad = new TH1D("h1_met_allhad", "met_allhad; met_allhad", 100, 0, 1000); h1_met_allhad->Sumw2();
-	TH1D *h1_metphi_allhad = new TH1D("h1_metphi_allhad", "metphi_allhad; metphi_allhad", 100, -3.2, 3.2); h1_metphi_allhad->Sumw2();
-	TH1D *h1_uncorrmetphi_allhad = new TH1D("h1_uncorrmetphi_allhad", "Uncorrected metphi_allhad; Uncorrected metphi_allhad", 100, -3.2, 3.2); h1_uncorrmetphi_allhad->Sumw2();
+				vHtBinnedHist.push_back(hist);	
 
-	TH1D *h1_met_leptonic = new TH1D("h1_met_leptonic", "met_leptonic; met_leptonic", 100, 0, 1000); h1_met_leptonic->Sumw2();
-	TH1D *h1_metphi_leptonic = new TH1D("h1_metphi_leptonic", "metphi_leptonic; metphi_leptonic", 100, -3.2, 3.2); h1_metphi_leptonic->Sumw2();
-	TH1D *h1_uncorrmetphi_leptonic = new TH1D("h1_uncorrmetphi_leptonic", "Uncorrected metphi_leptonic; Uncorrected metphi_leptonic", 100, -3.2, 3.2); h1_uncorrmetphi_leptonic->Sumw2();
-
-	TH1D *h1_nJets = new TH1D("h1_nJets", "number of jets; nJets", 20, 0, 20); h1_nJets->Sumw2();
-	TH1D *h1_nJets_allhad = new TH1D("h1_nJets_allhad", "number of jets; nJets_allhad", 20, 0, 20); h1_nJets_allhad->Sumw2();
-	TH1D *h1_nJets_leptonic = new TH1D("h1_nJets_leptonic", "number of jets; nJets_leptonic", 20, 0, 20); h1_nJets_leptonic->Sumw2();
-	TH1D *h1_vtxSize = new TH1D("h1_vtxSize", "number of vertices; vtxSize", 100, 0, 100); h1_vtxSize->Sumw2();
-	*/
-
+			} /*end ht bin loop*/
+			vJetBinnedHist.push_back(vHtBinnedHist);	
+		} /*end jetbin loop*/
+		vHist.push_back(vJetBinnedHist);	
+	} /* end mt loop */
 }
-
-
 
 unsigned CSA14::GetVectorIndex(const vector< pair<unsigned, unsigned> >& binEdges, const unsigned& val)
 {
